@@ -62,12 +62,23 @@ services:
       DATABASE_URL: postgres://medusa:${POSTGRES_PASSWORD}@postgres:5432/medusa
       REDIS_URL: redis://redis:6379
 
-      STORE_CORS: http://${NAS_IP}:8000,http://localhost:8000
-      ADMIN_CORS: http://${NAS_IP}:9000,http://localhost:9000
-      AUTH_CORS: http://${NAS_IP}:9000,http://localhost:9000
+      # 本地 Storefront
+      STORE_CORS: http://localhost:8000,http://localhost:3000,http://192.168.68.58:8000
+
+      # Medusa Admin
+      ADMIN_CORS: https://hundsfutter.dongxu.info,http://192.168.68.58:9000,http://localhost:9000
+
+      # 登录 / Session
+      AUTH_CORS: https://hundsfutter.dongxu.info,http://192.168.68.58:9000,http://localhost:9000,http://localhost:8000,http://localhost:3000
 
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_SECRET: ${COOKIE_SECRET}
+
+      MEDUSA_BACKEND_URL: https://hundsfutter.dongxu.info
+      MEDUSA_FILE_URL: https://hundsfutter.dongxu.info/static
+
+    volumes:
+      - medusa_uploads:/server/apps/backend/static
 
     networks:
       - medusa_network
@@ -75,6 +86,7 @@ services:
 
 volumes:
   medusa_postgres_data:
+  medusa_uploads:
 
 
 networks:
