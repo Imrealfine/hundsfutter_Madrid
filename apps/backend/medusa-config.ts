@@ -7,6 +7,10 @@ module.exports = defineConfig({
     databaseUrl: process.env.DATABASE_URL,
     redisUrl: process.env.REDIS_URL,
 
+    workerMode:
+      (process.env.MEDUSA_WORKER_MODE as "shared" | "worker" | "server") ||
+      "shared",
+
     databaseDriverOptions: {
       ssl: false,
       sslmode: "disable",
@@ -40,23 +44,7 @@ module.exports = defineConfig({
   ],
 
   admin: {
+    disable: process.env.DISABLE_MEDUSA_ADMIN === "true",
     backendUrl: process.env.MEDUSA_BACKEND_URL,
-
-    vite: (config) => {
-      return {
-        ...config,
-        server: {
-          ...config.server,
-          host: "0.0.0.0",
-
-          allowedHosts: true,
-
-          hmr: {
-            port: 5173,
-            clientPort: 5173,
-          },
-        },
-      }
-    },
   },
 })
