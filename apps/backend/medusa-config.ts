@@ -1,50 +1,74 @@
-import { loadEnv, defineConfig } from "@medusajs/framework/utils"
+# =========================
+# Builder
+# =========================
+FROM node:20-alpine AS builder
 
-loadEnv(process.env.NODE_ENV || "development", process.cwd())
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++
 
-module.exports = defineConfig({
-  projectConfig: {
-    databaseUrl: process.env.DATABASE_URL,
-    redisUrl: process.env.REDIS_URL,
+RUN corepack enable && \
+    corepack prepare pnpm@10.11.1 --activate
 
-    workerMode:
-      (process.env.MEDUSA_WORKER_MODE as "shared" | "worker" | "server") ||
-      "shared",
+WORKDIR /server
 
-    databaseDriverOptions: {
-      ssl: false,
-      sslmode: "disable",
-    },
+# 先复制 workspace 依赖描述文件，利用 Docker cache
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .npmrc ./
 
-    http: {
-      storeCors: process.env.STORE_CORS!,
-      adminCors: process.env.ADMIN_CORS!,
-      authCors: process.env.AUTH_CORS!,
-      jwtSecret: process.env.JWT_SECRET,
-      cookieSecret: process.env.COOKIE_SECRET,
-    },
-  },
+COPY apps/backend/package.json ./apps/backend/package.json
+COPY apps/storefront/package.json ./apps/storefront/package.json
 
-  modules: [
-    {
-      resolve: "@medusajs/medusa/file",
-      options: {
-        providers: [
-          {
-            resolve: "@medusajs/medusa/file-local",
-            id: "local",
-            options: {
-              upload_dir: "static",
-              backend_url: process.env.MEDUSA_FILE_URL,
-            },
-          },
-        ],
-      },
-    },
-  ],
+# 安装整个 monorepo 的依赖
+RUN pnpm install --frozen-lockfile
 
-  admin: {
-    disable: process.env.DISABLE_MEDUSA_ADMIN === "true",
-    backendUrl: process.env.MEDUSA_BACKEND_URL,
-  },
-})
+# 再复制源码
+COPY . .
+
+# Admin build 时需要知道正式 Backend 地址
+ARG MEDUSA_BACKEND_URL=https://hundsfutter.dongxu.info
+ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
+
+ARG DISABLE_MEDUSA_ADMIN=false
+ENV DISABLE_MEDUSA_ADMIN=${DISABLE_MEDUSA_ADMIN}
+
+WORKDIR /server/apps/backend
+
+# 构建 Medusa production server + Admin
+RUN pnpm build
+
+
+# =========================
+# Production Runtime
+# =========================
+FROM node:20-alpine AS runner
+
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++
+
+RUN corepack enable && \
+    corepack prepare pnpm@10.11.1 --activate
+
+WORKDIR /app
+
+# 只复制 Medusa 独立 production build
+COPY --from=builder /server/apps/backend/.medusa/server ./
+
+# 把 pnpm 配置也带进独立运行目录
+COPY --from=builder /server/.npmrc ./.npmrc
+
+# 这里不要 frozen，因为 .medusa/server 是 build 生成的独立项目
+RUN pnpm install --prod --no-frozen-lockfile
+
+ENV NODE_ENV=production
+ENV PORT=9000
+
+EXPOSE 9000
+
+# 先 migration，再启动 production server
+CMD ["sh", "-c", "pnpm exec medusa db:migrate && pnpm start"]
