@@ -42,6 +42,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        MEDUSA_BACKEND_URL: https://hundsfutter.dongxu.info
+        DISABLE_MEDUSA_ADMIN: "false"
 
     container_name: medusa_backend
     restart: unless-stopped
@@ -54,22 +57,22 @@ services:
 
     ports:
       - "9000:9000"
-      - "5173:5173"
 
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
+      PORT: 9000
 
       DATABASE_URL: postgres://medusa:${POSTGRES_PASSWORD}@postgres:5432/medusa
       REDIS_URL: redis://redis:6379
 
-      # 本地 Storefront
-      STORE_CORS: http://localhost:8000,http://localhost:3000,http://192.168.68.58:8000
+      MEDUSA_WORKER_MODE: shared
+      DISABLE_MEDUSA_ADMIN: "false"
 
-      # Medusa Admin
-      ADMIN_CORS: https://hundsfutter.dongxu.info,http://192.168.68.58:9000,http://localhost:9000
+      STORE_CORS: http://localhost:8000,http://localhost:3000
 
-      # 登录 / Session
-      AUTH_CORS: https://hundsfutter.dongxu.info,http://192.168.68.58:9000,http://localhost:9000,http://localhost:8000,http://localhost:3000
+      ADMIN_CORS: https://hundsfutter.dongxu.info
+
+      AUTH_CORS: https://hundsfutter.dongxu.info,http://localhost:8000,http://localhost:3000
 
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_SECRET: ${COOKIE_SECRET}
@@ -78,7 +81,7 @@ services:
       MEDUSA_FILE_URL: https://hundsfutter.dongxu.info/static
 
     volumes:
-      - medusa_uploads:/server/apps/backend/static
+      - medusa_uploads:/server/apps/backend/.medusa/server/static
 
     networks:
       - medusa_network
