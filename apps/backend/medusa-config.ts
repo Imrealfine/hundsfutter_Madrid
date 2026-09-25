@@ -21,7 +21,27 @@ module.exports = defineConfig({
     },
   },
 
+  modules: [
+    {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/file-local",
+            id: "local",
+            options: {
+              upload_dir: "static",
+              backend_url: process.env.MEDUSA_FILE_URL,
+            },
+          },
+        ],
+      },
+    },
+  ],
+
   admin: {
+    backendUrl: process.env.MEDUSA_BACKEND_URL,
+
     vite: (config) => {
       return {
         ...config,
@@ -29,7 +49,7 @@ module.exports = defineConfig({
           ...config.server,
           host: "0.0.0.0",
 
-          // 仅适合你现在 NAS 局域网开发
+          // NAS 局域网开发环境
           allowedHosts: true,
 
           hmr: {
