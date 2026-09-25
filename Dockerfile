@@ -11,17 +11,18 @@ RUN corepack enable && \
 
 WORKDIR /server
 
-# 先复制 workspace 配置，提高 Docker 缓存命中率
+# 先复制 workspace 配置
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/package.json
 COPY apps/storefront/package.json ./apps/storefront/package.json
 
+# 安装源码构建所需依赖
 RUN pnpm install --frozen-lockfile
 
-# 复制全部项目
+# 复制完整源码
 COPY . .
 
-# Medusa Admin 在 build 时需要知道正式后端地址
+# Admin build 时需要知道最终后端地址
 ARG MEDUSA_BACKEND_URL=https://hundsfutter.dongxu.info
 ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
 
@@ -30,18 +31,21 @@ ENV DISABLE_MEDUSA_ADMIN=${DISABLE_MEDUSA_ADMIN}
 
 WORKDIR /server/apps/backend
 
-# 创建正式 Production Build
+# 构建正式版本
 RUN pnpm build
 
-# Medusa 官方要求从 .medusa/server 启动生产构建
+# ==========================
+# Production runtime
+# ==========================
+
 WORKDIR /server/apps/backend/.medusa/server
 
-# 安装 production build 所需依赖
-RUN pnpm install --prod --frozen-lockfile
+# 关键：在 standalone build 中重新安装自己的依赖
+RUN npm install --omit=dev
 
 ENV NODE_ENV=production
 ENV PORT=9000
 
 EXPOSE 9000
 
-CMD ["sh", "-c", "pnpm medusa db:migrate && pnpm medusa start --host 0.0.0.0 --port 9000"]
+CMD ["sh", "-c", "./node_modules/.bin/medusa db:migrate && ./node_modules/.bin/medusa start --host 0.0.0.0 --port 9000"]
