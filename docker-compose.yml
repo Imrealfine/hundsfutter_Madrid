@@ -74,8 +74,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       COOKIE_SECRET: ${COOKIE_SECRET}
 
-      MEDUSA_BACKEND_URL: https://hundsfutter.dongxu.info
-      MEDUSA_FILE_URL: https://hundsfutter.dongxu.info/static
+      MEDUSA_BACKEND_URL: http://192.168.68.58:9000
+      MEDUSA_FILE_URL: http://192.168.68.58:9000/static
 
     volumes:
       - medusa_uploads:/server/apps/backend/static
