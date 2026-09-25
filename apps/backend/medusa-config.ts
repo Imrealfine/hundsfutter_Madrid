@@ -49,7 +49,6 @@ module.exports = defineConfig({
           ...config.server,
           host: "0.0.0.0",
 
-          // NAS 局域网开发环境
           allowedHosts: true,
 
           hmr: {
