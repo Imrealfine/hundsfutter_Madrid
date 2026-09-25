@@ -82,6 +82,7 @@ services:
 
     networks:
       - medusa_network
+      - cloudflare_network
 
 
 volumes:
